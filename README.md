@@ -5,7 +5,7 @@ Real LDraw parts; every station is clash/fit-checked with `lcheck.py`.
 
 ## Setup
 1. LDraw library (not included, public): download `complete.zip` from ldraw.org, unpack to `/home/claude/ldraw/lib/complete/ldraw`.
-2. LDCad shadow library (included as `ldcad-shadow/`): copy to `/home/claude/ldraw/shadow`.
+2. LDCad shadow library (included as `ldcad-shadow/`, copy of https://github.com/RolandMelkert/LDCadShadowLibrary at 9b1131f): copy to `/home/claude/ldraw/shadow`. Or just run `./setup.sh`; AI agents: read `CLAUDE.md`.
 3. Put `src/` at `/home/claude/scripts` (paths are hard-coded in `ldr.py` ROOT / SHADOW / CACHE and in the preview scripts).
 
 ## Map of the code
