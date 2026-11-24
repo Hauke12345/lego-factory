@@ -168,7 +168,7 @@ def build_side(side, st):
                 p['M'] = MIR @ p['M'] @ MIR
                 if p['name'].startswith('cs_') and _bflip(p['part']): p['M'] = p['M'] @ R('y', 180)
         _place_canon(n0, G)
-        CB = {'ctable', 'cxfer', 'ccrank', 'cconrod', 'cdsetdrv', 'cdsetidf', 'cdsetidb', 'cchain', 'cbelt', 'cqueue', 'cbelt0', 'cbelt1'}
+        CB = {'ctable', 'cxfer', 'ccrank', 'cconrod', 'cdsetdrv', 'cdsetidf', 'cdsetidb', 'cchain', 'cbelt', 'cqueue', 'cbelt0', 'cbelt1', 'ccoupl'}
         for p in P[n0:]:
             if p['name'].startswith('cs_'): p['name'] = side + p['name']
             if p['body'] in CB: p['body'] = side + p['body']

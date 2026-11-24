@@ -53,15 +53,31 @@ Python in `src/`; nothing important lives outside this repo except the public LD
   (track-unit cell, crank pusher `asm2.pusher`), `cell.py`, `shoulder.py`, `rails.py`.
 - Track-unit line: `tline.py` (build wagon visits S0..S4, supply train S0..S5 + loco, timeline `state()`, refill table
   `REF`), `tunit.py` (build/supply wagons and their tooling).
-- Chain station: `chainst.py` (tilting table in robot frame: stubs, Boost chain drive on the idler at z -80,
-  transfer rods + crank, guide posts, `chain_links(n, adv)`), `cstation.py` (hinge, tilt hub, link belt, queue,
-  side rails, `state(u)`, `build_canon()`); placed from `tline.build_side`.
+- Chain station: `chainst.py` (tilting table in robot frame: 10L stubs coupled 1:1 by a 34-link 3711 chain on 24T gears
+  at x 28 under the table, Boost drive on the idler at z -80, transfer rods + crank, guide channel `GUIDES`,
+  `chain_links(n, adv)`), `cstation.py` (hinge, tilt hub, link belt, queue, side rails, `state(u)`, `build_canon()`);
+  placed from `tline.build_side`. Tread links run clips-first (`worker2.link_flip`): the 3873 clip opens towards the
+  sprocket side, so a new link pushed in from outside snaps its clips onto the bar of the link ahead.
+- Physics checks (MuJoCo 4, `pip install mujoco`, render with `MUJOCO_GL=egl`): `sim/sync_sim.py MODE OUT.npz` (drive
+  test, MODE sync|single; results `sim/s_sync.png`, `sim/s_single.png`), `sim/close_sim*.py` (closing-step tests).
 - Previews: `prev3.py` (final line), `prevT.py` (unit line), `prevC.py` (chain station) + `*_post.py` (captions, ffmpeg).
   Example: `python3 prevC.py OUT 246 0 123 & python3 prevC.py OUT 246 123 246; python3 prevC_post.py OUT out.mp4 6`.
 - Other files (`bridge*`, `bscene.py`, `sfm.py`, `film*.py`, `fem*.py`, …) belong to the user's earlier bridge/film
   projects and to older factory iterations (`line1/line2`, `worker.py`); not needed for the current line.
 
-## 5. Status (2026-11-21)
+## 5. Status (2026-11-25)
+Chain station redesign (validated in MuJoCo): the open chain jams if only one sprocket drives it; with all three driven
+together + a guide channel every link stays on the loop and the free head reaches the slot within 5 LDU -> coupling chain
+and guide posts built, links flipped, full line re-swept.
+Closing the loop (34th link) is NOT solved yet. Facts found: a 3873 joint bends outward only ~12 deg (plates touch, from
+the LDraw meshes) and inward freely to ~90 deg; the closing joint needs link 33's rear bar to enter link 0's clips from the
+INSIDE (clips open towards the sprocket). Swinging link 0 out (fork) is impossible; pushing the free head out from below
+is floppy (sim: misaligned by 5-15 LDU). Candidate to test next: "post and swing" - link 33 goes in tilted ~60 deg (rear end
+first, inside the loop, just ahead of link 0's clips), its front clips catch link 32's bar (at that tilt the clip opening
+faces forward), then a finger from below swings its rear end out so the bar enters link 0's clips from inside. Needs a sim
+with real clip/bar shapes. Also open: a positive feed pusher (belt friction ~0.05 N is too weak to snap a link).
+
+### Earlier status (2026-11-21)
 Done and clash-checked over the cycle (both sides): final assembly line (builder + tug), track-unit line with five
 stations and handover, chain station building the drive set from 3 sprockets + 34 single 3873 links and handing it
 to supply wagon S4; S5 brings loose sprockets. Previews in `previews/`.

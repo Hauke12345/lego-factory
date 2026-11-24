@@ -190,7 +190,9 @@ def run(P, verbose=True):
     adj = {i: set() for i in range(len(P))}
     for (a, b), lst in conns.items():
         kinds = [k for k, ok in lst]
-        if any(not ok for k, ok in lst):
+        if any(not ok for k, ok in lst) and not ('3062b' in (P[a]['part'], P[b]['part']) and set(kinds) == {'oversize', 'stud'}):
+            # (the LDCad shadow of the 1x1 round brick gives its bottom rim an R8 'male' ring that meets the hollow stud below:
+            #  a normal stacked round brick shows up as 'oversize' next to its real stud fit)
             rep['bad_fits'].append((P[a]['name'], P[b]['name'], sorted(set(kinds))))
         adj[a].add(b); adj[b].add(a)
     # ---------- gears ----------
@@ -276,13 +278,15 @@ def run(P, verbose=True):
         elif any(k == 'stud' for k, _ in conns.get((a, b), [])) and len(hits) < 60: exp = 'clutch post touching studs'
         elif {pa['part'], pb['part']} & {'3873'} and ({pa['part'], pb['part']} & set(GEARS) or pa['part'] == pb['part']):
             exp = 'tread on sprocket' if pa['part'] != pb['part'] else 'tread hinge'
+        elif {pa['part'], pb['part']} & {'3711'} and ({pa['part'], pb['part']} & set(GEARS) or pa['part'] == pb['part']) and len(hits) < 150:
+            exp = 'chain on gear' if pa['part'] != pb['part'] else 'chain hinge'
         (rep['expected'] if exp else rep['clashes']).append((pa['name'], pb['name'], len(hits), exp))
     # ---------- connectivity ----------
     bodies = {}
     for i, p in enumerate(P): bodies.setdefault(p['body'], []).append(i)
     for bname, idx in bodies.items():
         if bname.startswith('link'): continue
-        idx = [i for i in idx if P[i]['part'] != '3873' and 'ends' not in P[i]]      # track links: checked by pitch; cables are flexible
+        idx = [i for i in idx if P[i]['part'] not in ('3873', '3711') and 'ends' not in P[i]]   # tread/chain links: checked by pitch; cables are flexible
         S = set(idx); seen = set(); groups = 0
         for s in idx:
             if s in seen: continue
@@ -301,7 +305,7 @@ def run(P, verbose=True):
         if groups > 1:                                   # a resting body may be unattached, but it must still hold together
             rep['unconnected'].append(f'body {bname} falls apart into {groups} groups')
     for i, p in enumerate(P):
-        if not adj[i] and not p['body'].startswith('link') and p['part'] != '3873' and 'ends' not in p and not (p['body'] in RESTING and len(bodies[p['body']]) == 1):
+        if not adj[i] and not p['body'].startswith('link') and p['part'] not in ('3873', '3711') and 'ends' not in p and not (p['body'] in RESTING and len(bodies[p['body']]) == 1):
             rep['unconnected'].append(f"part {p['name']} ({p['part']}) has no connection")
     rep['n_parts'] = len(P); rep['n_conns'] = len(conns)
     if verbose:

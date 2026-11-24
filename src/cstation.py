@@ -190,7 +190,7 @@ def build_canon(st, tst):
     lcheck.RESTING.update({'ctable': 'turns on the hinge axle', 'cxfer': 'slides in the table', 'ccrank': 'on the motor',
                            'cconrod': 'crank linkage', 'cdsetdrv': 'on its stub', 'cdsetidf': 'on its stub', 'cdsetidb': 'on its stub',
                            'cchain': 'round the sprockets', 'cbelt': 'tread belt on its sprockets', 'cqueue': 'stands on the belt',
-                           'cbelt0': 'turns in the belt frame', 'cbelt1': 'driven by the belt hub'})
+                           'cbelt0': 'turns in the belt frame', 'cbelt1': 'driven by the belt hub', 'ccoupl': 'Technic chain round its gears'})
     return P[n0:]
 
 if __name__ == '__main__':

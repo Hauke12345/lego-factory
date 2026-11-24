@@ -29,7 +29,8 @@ def caption(u, cs):
     if u < cstation.U_B: return 'Belt brings the queue of links back to the table edge'
     v = u - cstation.U_B
     j = int(v // cstation.TL)
-    if j < 34: return f'Link {j + 1} of 34: queue pressure pushes it into the slot, the driven idler turns the chain one pitch'
+    if j < 33: return f'Link {j + 1} of 34 snaps onto the tail · all three sprockets turn together (Technic chain under the table), guide posts keep the open chain on its path'
+    if j < 34: return 'Link 34 closes the loop (closing mechanism still being designed: shown schematically)'
     return 'Chain closed · two more pitches so the sprocket axles line up for the next set'
 
 def cam_for(u):

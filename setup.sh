@@ -5,8 +5,8 @@ set -e
 REPO="$(cd "$(dirname "$0")" && pwd)"
 BASE=/home/claude
 mkdir -p $BASE/ldraw/lib/complete $BASE/factory
-pip install --break-system-packages bpy==5.2.3 numpy scipy pillow matplotlib opencv-python-headless imageio || \
-pip install bpy==5.2.3 numpy scipy pillow matplotlib opencv-python-headless imageio
+pip install --break-system-packages bpy==5.2.3 numpy scipy pillow matplotlib opencv-python-headless imageio mujoco || \
+pip install bpy==5.2.3 numpy scipy pillow matplotlib opencv-python-headless imageio mujoco
 command -v ffmpeg >/dev/null || (apt-get update && apt-get install -y ffmpeg)
 # LDraw parts library (public, ~700 MB unpacked)
 if [ ! -f $BASE/ldraw/lib/complete/ldraw/LDConfig.ldr ]; then

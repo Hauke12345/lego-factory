@@ -11,8 +11,16 @@ chain lies flat on the table while it is built link by link.
   rods       : three push rods through the table behind the sprockets, on a thin-liftarm frame driven by the rack: they slide
                the finished drive set off the stubs onto the S4 guides (56 LDU)
   hinge      : 1x2 axle-hole Technic bricks under the table on an axle into the station's tilt Move Hub (fixed pedestal)
-Links are added one at a time at the bottom run (slot = link 19 of worker2's loop), radially from outside, each new link
-snapping onto the tail; between insertions the drive stub turns the chain on by one pitch.
+Links are added one at a time at the bottom run (slot = link 20 of worker2's loop), radially from outside, each new link
+snapping its clips onto the bar of the tail (the 3873 clip opens towards the sprocket side, so links run clips-first:
+worker2.link_flip); between insertions all three sprockets turn the chain on by one pitch.
+Validated in MuJoCo (scratchpad sim/sync_sim.py): with only one driven sprocket the open chain jams (the head ends 5 links
+behind); with all three driven together and a guide channel every link stays on the loop. So:
+  coupling   : the three stubs (10L axles) carry 24T gears at x 28 joined by a closed 34-link 3711 Technic chain (the tread
+               loop's own geometry), below everything else that moves under the table
+  guides     : round 1x1 posts outside (arcs included) and inside on the straight runs (GUIDES)
+Physical limit found on the LDraw meshes: a 3873 joint bends OUTWARD only ~12 deg before the plates touch; closing the loop
+(34th link) therefore cannot be done by swinging the head link out - see CLAUDE.md, open items.
 """
 import numpy as np
 import asm2, worker2, lcheck
@@ -34,7 +42,7 @@ def link_M(s):
     out = -np.array([-t[1], t[0]])
     Z = np.array([0, t[0], t[1]]); Yv = np.array([0, out[0], out[1]]); X = np.cross(Yv, Z)
     M = np.eye(4); M[:3, 0], M[:3, 1], M[:3, 2] = X, Yv, Z; M[:3, 3] = [-136, p[0], p[1]]
-    return M
+    return M @ worker2.link_flip(PITCH)
 S_SLOT = K_SLOT*PITCH
 MAG = np.array([0.0, 14.0, 0.0])                  # magazine step (radially out from the slot, +y)
 
@@ -95,6 +103,21 @@ M2O = (-36.0, -120.0)                             # chain motor output (x, z), a
 M1O = (-52.0, 80.0)                               # transfer motor output (x, z), axis along y, front face y -111
 MOT_Y = col3((0, 0, -1), (1, 0, 0), (0, -1, 0))   # Boost motor: top (studs) -> -x (table), output along +y
 
+# ---------------------------------------------------------------- coupling: the three stubs turn together, 1:1
+X_CC = 28.0                                       # coupling plane (24T gears + 3711 chain), below the rods' tails (x <= 13.4)
+def _spr_Ms():
+    Q = []; worker2.build(M0=np.eye(4), tag='x', body='x', P=Q, modules={'trackL'})
+    return [(q['name'].split('_spr_')[1], q['M']) for q in Q if '_spr_' in q['name']]
+SPR_M = _spr_Ms()
+def coupling(a, adv, body='ccoupl'):
+    """24T on each stub (phased like the tread sprockets) and a closed 34-link 3711 chain round them; adv in tread pitches."""
+    for n, M in SPR_M:
+        c = M[:3, 3]; Mg = T(X_CC - c[0], 0, 0) @ T(*c) @ R('x', -30.0*adv) @ T(*(-c)) @ M
+        a(f'cg24_{n}', '3648b', LBG, Mg)
+    for k in range(34):
+        M = link_M(k*PITCH + adv*PITCH); M = T(X_CC + 136, 0, 0) @ M
+        a(f'cc{k:02d}', '3711', DBG, M, body)
+
 def table(a, adv=0.0):
     """a(name, part, colour, M): the table and everything fixed to it (robot frame, tilted pose). Its two Boost motors
     are powered from the tilt hub (ports C, D): no hub rides on the table. adv: chain advance in pitches (turns the drive train:
@@ -116,13 +139,14 @@ def table(a, adv=0.0):
     for part, (y0, z0) in tech: a(f'L2_t{y0:.0f}_{z0:.0f}', part, YEL, T(X_TOP + 16, y0, z0) @ PZ)
     _lay(a, 'L2_p', allc - tcells, X_TOP + 16, 1, PLATES, LBG)       # Technic plates (the bearings) + plates along z
     # stubs (axles in the Technic-plate holes; sprockets ride on them)
-    a('stubD', '32073', BLK, T(-110, *DRV))                         # 5L: -160 .. -60
-    a('stubDb', '32123a', YEL, T(-81, *DRV) @ R('y', 90))
-    for i, (y, z) in enumerate(IDL):
+    # stubs: 10L axles (-160 .. 40); all three turn together, coupled by a 34-link Technic chain on 24T gears at x 28,
+    # an exact copy of the tread loop's geometry, low under the table where nothing else moves
+    for i, (y, z) in enumerate([DRV] + IDL):
         drv = (y, z) == IDM
-        a(f'stubI{i}', '32073', BLK, T(-110, y, z) @ R('x', th_idl if drv else 0.0))
+        a(f'stub{i}', '3737', BLK, T(-60, y, z) @ R('x', th_idl))
         if drv: a('g8', '3647', LBG, T(X_GEAR, y, z) @ R('x', th_idl) @ R('y', 90))
-        else: a(f'stubIb{i}', '32123a', YEL, T(-81, y, z) @ R('y', 90))
+        else: a(f'stubb{i}', '32123a', YEL, T(-81, y, z) @ R('y', 90))
+    coupling(a, adv)
     # chain drive: Boost motor -> bevel pair -> x-shaft -> 24T -> 8T on the driven idler stub
     a('shaft', '32073', BLK, T(-44, *SHAFT) @ R('x', th_sh))                        # 5L: -94 .. 6 (bearing in the Technic plate)
     a('g24', '3648b', LBG, T(X_GEAR, *SHAFT) @ R('x', th_sh) @ R('y', 90))
@@ -206,28 +230,53 @@ SLOT_ZONE = (-100.0, -40.0)                       # bottom-run z range kept open
 def _outline():
     ss = np.linspace(0, PER, 1200, endpoint=False)
     pts = np.array([AT(s)[0] for s in ss]); return pts
+_LV = None
+def link_cloud(xr=(-154.0, -110.0)):
+    """(y, z) of every tread-link vertex in the post height range, the closed chain sampled over one pitch of travel."""
+    global _LV
+    if _LV is None:
+        import ldr
+        V = np.array([v for t in ldr.part('3873')['tris'] for v in t], float); V = np.unique(V.round(2), axis=0)
+        Vh = np.c_[V, np.ones(len(V))]; out = []
+        for f in np.linspace(0, 1, 8, endpoint=False):
+            for k in range(34):
+                W = (link_M((k + f)*PITCH) @ Vh.T).T[:, :3]
+                out.append(W[(W[:, 0] >= xr[0]) & (W[:, 0] <= xr[1])][:, 1:])
+        _LV = np.concatenate(out)
+    return _LV
 def guide_cells(gap=(0.6, 6.0)):
-    """grid cells (stud centres) for round posts just outside the chain's outer faces (pitch line + 8)."""
+    """grid cells (stud centres) for square posts just outside the chain's outer faces (real link geometry, all phases)."""
     pts = _outline(); from matplotlib.path import Path as _P
-    inside = _P(pts)
+    inside = _P(pts); LV = link_cloud()
     out = []
     for y in YR:
         for z in ZC:
             if inside.contains_point((y, z)): continue
-            dy_ = np.maximum(np.abs(pts[:, 0] - y) - 10, 0); dz_ = np.maximum(np.abs(pts[:, 1] - z) - 10, 0)
-            d = np.min(np.hypot(dy_, dz_)) - 8.0                     # square 1x1 post to the links' outer faces
+            dy_ = np.maximum(np.abs(LV[:, 0] - y) - 10, 0); dz_ = np.maximum(np.abs(LV[:, 1] - z) - 10, 0)
+            d = np.min(np.hypot(dy_, dz_))                           # square 1x1 post to the nearest link point
             if not (gap[0] <= d <= gap[1]): continue
             if y > 19 and SLOT_ZONE[0] - 10 <= z <= SLOT_ZONE[1] + 10: continue
             out.append((y, z))
     return out
-GUIDE_CELLS = guide_cells()
+# guide channel (validated in MuJoCo: all three sprockets driven + guides keep the open chain on its path, the free head
+# arrives at the slot within 5 LDU). Round 1x1 posts, chosen on the stud / half-stud (jumper) lattice from the real link
+# geometry over a whole pitch of travel: outside the loop 2 .. 2.3 LDU from the links (arcs included), inside on the straights
+# 1 .. 5 LDU, clear of the sprockets, stubs and rods; the outer bottom-left (feed row, pusher, closing fork) stays open.
+# 'd' = on a stud of the bottom plate layer, 'jy'/'jz' = on a jumper (1x2, centre stud) along y / z in the tile layer.
+GUIDES = [(-81.0, 70.0, 'd'), (-51.0, 50.0, 'jy'), (-51.0, 110.0, 'jy'), (9.0, 130.0, 'jy'), (39.0, 100.0, 'jz'), (39.0, 60.0, 'jz'), (-1.0, 30.0, 'd'), (39.0, 30.0, 'd'), (-1.0, 0.0, 'jz'), (39.0, 0.0, 'jz'), (-1.0, -30.0, 'd'), (39.0, -30.0, 'd'), (9.0, -130.0, 'jy'), (-31.0, -130.0, 'jy'), (-61.0, -100.0, 'jz'), (-51.0, -50.0, 'jy'), (-81.0, -70.0, 'd'), (-111.0, -30.0, 'jy'), (-121.0, 20.0, 'jz')]
+def _post_cells(y, z, k):
+    return [(y, z)] if k == 'd' else ([(y - 10, z), (y + 10, z)] if k == 'jy' else [(y, z - 10), (y, z + 10)])
+GUIDE_CELLS = [c for y, z, k in GUIDES for c in _post_cells(y, z, k)]
 MOUTH_CELLS = [(39.0, -110.0), (39.0, -90.0), (39.0, -50.0)]   # posts either side of the slot mouth (one on a jumper: z -100)
 def guides(a):
-    """two-high 1x1 posts on the bottom plate layer (their tile cells are left out); the mouth posts guide the front link
-    of the queue into the slot (inner faces z -90 and -60; the link spans z -88.7 .. -62.7)."""
+    """two-high round 1x1 posts (on a jumper they start one plate higher); the mouth posts guide the front link of the
+    queue into the slot (inner faces z -90 and -60; the link spans z -88.7 .. -62.7)."""
     a('mj', '3794b', DBG, T(-110, 39, -100) @ PZ)
     for k in range(2):
         a(f'mp-100_{k}', '3005', DBG, T(-134 - 24*k, 39, -100) @ PO)
         a(f'mp-50_{k}', '3005', DBG, T(-126 - 24*k, 39, -50) @ PO)
-    for (y, z) in guide_cells():
-        for k in range(2): a(f'gp{y:.0f}_{z:.0f}_{k}', '3005', DBG, T(-126 - 24*k, y, z) @ PO)
+    for y, z, k in GUIDES:
+        x0 = -102.0
+        if k != 'd':
+            a(f'gj{y:.0f}_{z:.0f}', '3794b', DBG, T(-110, y, z) @ (PO if k == 'jy' else PZ)); x0 = -110.0
+        for n in range(2): a(f'gp{y:.0f}_{z:.0f}_{n}', '3062b', DBG, T(x0 - 24*(n + 1), y, z) @ PO)

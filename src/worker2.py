@@ -23,6 +23,13 @@ GROUND = Y_ID + RP + 8                  # track outer surface under the idlers =
 
 def hub_pt(xl, yl, zl): return HC + MH[:3, :3] @ np.array([xl, yl, zl])
 
+def link_flip(pitch):
+    """links run clips-first in the loop direction: each link's clip end (local origin) leads, so a new link pushed in
+    from outside (along its local +y, towards the sprocket) snaps its clips onto the bar of the link ahead - the clip on a
+    3873 opens towards the sprocket side (checked on the LDraw geometry). Same span as before: origin moved one pitch on,
+    half turn about local y."""
+    return T(0, 0, pitch) @ R('y', 180)
+
 def track_path(nlinks=34):
     """pin positions/angles of a closed track around drive (top) and two idlers, all pitch radius RP."""
     C = [np.array([Y_OUT, 0.0]), np.array([Y_ID, Z_ID]), np.array([Y_ID, -Z_ID])]   # (y, z), clockwise seen from +x
@@ -82,7 +89,7 @@ def build(st=None, M0=np.eye(4), tag='w', body='worker', P=None, gun=True, track
             # link frame: local z = travel tangent, local -y = outward, local x = across (world x)
             Z = np.array([0, t[0], t[1]]); Yv = np.array([0, out[0], out[1]]); X = np.cross(Yv, Z)   # 'out' points into the loop: local -y (grip plate) must face away from it
             M = np.eye(4); M[:3, 0], M[:3, 1], M[:3, 2] = X, Yv, Z; M[:3, 3] = [136*sx, p[0], p[1]]
-            a(f'tk{s}_link{i:02d}', '3873', BLK, M)
+            a(f'tk{s}_link{i:02d}', '3873', BLK, M @ link_flip(pitch))
     # ---------------- head ----------------
     if 'head' in mods:
         a('hd_plate', '3031', DBG, T(0, -371, -74) @ R('x', 90))
