@@ -162,12 +162,12 @@ def build_canon(st, tst):
     n0 = len(P)
     G = table_G(st['theta'])
     at = lambda n, p, c, M, b='ctable': add('cs_' + n, p, c, G @ M, b)
-    cs.table(at)
+    cs.table(at, st['adv'] if st['spr'] or st['nl'] else 0.0)
     cs.transfer(lambda n, p, c, M, b='xfer': at(n, p, c, M, 'cxfer'), st['rod'])
     cs.crank(lambda n, p, c, M, b='crank': at(n, p, c, M, 'c' + b), st['rod'])
     D = T(-st['dset_u'], 0, 0)
     if st['spr']:
-        rot = (st['adv'] - N_ADV)*30.0
+        rot = -(st['adv'] - N_ADV)*30.0                        # chain runs -z on the bottom run: negative about +x
         Q = []; worker2.build(M0=np.eye(4), tag='x', body='x', P=Q, modules={'trackL'})
         for q in Q:
             if '_spr_' in q['name']:
@@ -180,10 +180,10 @@ def build_canon(st, tst):
     hinge_parts(lambda n, p, c, M, b='ctable': add('cs_' + n, p, c, M, 'ctable'), st['theta'])
     belt_frame(lambda n, p, c, M, b='frame': add('cs_' + n, p, c, M, b))
     for k, M in enumerate(belt_links(belt_phase(st))): add(f'cs_belt{k:02d}', '3873', BLK, M, 'cbelt')
-    ph = belt_phase(st); rot = np.degrees(ph/30.0)
-    add('cs_bax0', '3706', BLK, T(BX0, BY, -150) @ R('y', 90) @ R('x', rot), 'cbelt0')           # 6L: z -210 .. -90
-    add('cs_bax1', '3707', BLK, T(BX1, BY, -130) @ R('y', 90) @ R('x', rot), 'cbelt1')           # 8L: z -210 .. -50 (into the belt hub)
-    for k, x in enumerate((BX0, BX1)): add(f'cs_bspr{k}', '3648b', LBG, T(x, BY, BZ) @ R('z', -rot), f'cbelt{k}')
+    ph = belt_phase(st); rot = np.degrees(ph/30.0)             # top run moves +x: sprockets turn positively about +z
+    add('cs_bax0', '3706', BLK, T(BX0, BY, -150) @ R('y', 90) @ R('x', -rot), 'cbelt0')           # 6L: z -210 .. -90
+    add('cs_bax1', '3707', BLK, T(BX1, BY, -130) @ R('y', 90) @ R('x', -rot), 'cbelt1')           # 8L: z -210 .. -50 (into the belt hub)
+    for k, x in enumerate((BX0, BX1)): add(f'cs_bspr{k}', '3648b', LBG, T(x, BY, BZ) @ R('z', rot), f'cbelt{k}')
     belt_hub(lambda n, p, c, M, b='frame': add('cs_' + n, p, c, M, b))
     rails_q(lambda n, p, c, M, b='frame': add('cs_' + n, p, c, M, b))
     queue(lambda n, p, c, M, b='queue': add('cs_' + n, p, c, M, 'cqueue'), st)

@@ -95,9 +95,12 @@ M2O = (-36.0, -120.0)                             # chain motor output (x, z), a
 M1O = (-52.0, 80.0)                               # transfer motor output (x, z), axis along y, front face y -111
 MOT_Y = col3((0, 0, -1), (1, 0, 0), (0, -1, 0))   # Boost motor: top (studs) -> -x (table), output along +y
 
-def table(a):
+def table(a, adv=0.0):
     """a(name, part, colour, M): the table and everything fixed to it (robot frame, tilted pose). Its two Boost motors
-    are powered from the tilt hub (ports C, D): no hub rides on the table."""
+    are powered from the tilt hub (ports C, D): no hub rides on the table. adv: chain advance in pitches (turns the drive train:
+    sprockets 30 deg per link, 2 teeth; chain runs -z along the bottom run, so the driven idler turns negatively about +x)."""
+    th_idl = -30.0*adv; th_sh = -th_idl*8/24          # 8T on the idler stub -> 24T on the x-shaft (opposite sense, 1/3);
+                                                       # the 90-deg double-bevel pair turns the motor shaft (+y) at the shaft's rate
     allc = {(y, z) for y in YR for z in ZC}
     tech = [('3738', (-71.0, 0.0))]                                  # holes z -60 .. 60: drive stub (0), drive rod (20)
     for z in (80.0, -80.0): tech.append(('32001', (-11.0, z)))       # holes z +-(40 .. 120): idler stubs, rods (+-60), x-shaft (-120)
@@ -116,17 +119,18 @@ def table(a):
     a('stubD', '32073', BLK, T(-110, *DRV))                         # 5L: -160 .. -60
     a('stubDb', '32123a', YEL, T(-81, *DRV) @ R('y', 90))
     for i, (y, z) in enumerate(IDL):
-        a(f'stubI{i}', '32073', BLK, T(-110, y, z))
-        if (y, z) == IDM: a('g8', '3647', LBG, T(X_GEAR, y, z) @ R('y', 90))
+        drv = (y, z) == IDM
+        a(f'stubI{i}', '32073', BLK, T(-110, y, z) @ R('x', th_idl if drv else 0.0))
+        if drv: a('g8', '3647', LBG, T(X_GEAR, y, z) @ R('x', th_idl) @ R('y', 90))
         else: a(f'stubIb{i}', '32123a', YEL, T(-81, y, z) @ R('y', 90))
     # chain drive: Boost motor -> bevel pair -> x-shaft -> 24T -> 8T on the driven idler stub
-    a('shaft', '32073', BLK, T(-44, *SHAFT))                        # 5L: -94 .. 6 (bearing in the Technic plate)
-    a('g24', '3648b', LBG, T(X_GEAR, *SHAFT) @ R('y', 90))
-    a('bevS', '32269', LBG, T(M2O[0] + 30, *SHAFT) @ R('y', 90))    # crossing at x -52; double bevels 30 from it
+    a('shaft', '32073', BLK, T(-44, *SHAFT) @ R('x', th_sh))                        # 5L: -94 .. 6 (bearing in the Technic plate)
+    a('g24', '3648b', LBG, T(X_GEAR, *SHAFT) @ R('x', th_sh) @ R('y', 90))
+    a('bevS', '32269', LBG, T(M2O[0] + 30, *SHAFT) @ R('x', th_sh) @ R('y', 90))    # crossing at x -52; double bevels 30 from it
     for k in range(2): a(f'm2sh{k}', '3020', DBG, T(-86 + 8*k, -131, M2O[1]) @ PO)   # 2x4 shims under the motor's studs
     a('m2', '26913', WHT, T(-70, -111, M2O[1]) @ MOT_Y)              # front y -51
-    a('m2ax', '3704', BLK, T(M2O[0], -51, M2O[1]) @ R('z', 90))     # 2L: y -71 .. -31
-    a('bevM', '32269', LBG, T(M2O[0], SHAFT[0] - 30, M2O[1]) @ R('x', 90))
+    a('m2ax', '3704', BLK, T(M2O[0], -51, M2O[1]) @ R('y', th_sh) @ R('z', 90))     # 2L: y -71 .. -31
+    a('bevM', '32269', LBG, T(M2O[0], SHAFT[0] - 30, M2O[1]) @ R('y', th_sh) @ R('x', 90))
     # transfer motor (crank in the plane y -111 .. -81)
     a('m1', '26913', WHT, T(-86, -171, M1O[1]) @ MOT_Y)              # front y -111
     guides(a)
