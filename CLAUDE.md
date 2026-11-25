@@ -69,13 +69,19 @@ Python in `src/`; nothing important lives outside this repo except the public LD
 Chain station redesign (validated in MuJoCo): the open chain jams if only one sprocket drives it; with all three driven
 together + a guide channel every link stays on the loop and the free head reaches the slot within 5 LDU -> coupling chain
 and guide posts built, links flipped, full line re-swept.
-Closing the loop (34th link) is NOT solved yet. Facts found: a 3873 joint bends outward only ~12 deg (plates touch, from
-the LDraw meshes) and inward freely to ~90 deg; the closing joint needs link 33's rear bar to enter link 0's clips from the
-INSIDE (clips open towards the sprocket). Swinging link 0 out (fork) is impossible; pushing the free head out from below
-is floppy (sim: misaligned by 5-15 LDU). Candidate to test next: "post and swing" - link 33 goes in tilted ~60 deg (rear end
-first, inside the loop, just ahead of link 0's clips), its front clips catch link 32's bar (at that tilt the clip opening
-faces forward), then a finger from below swings its rear end out so the bar enters link 0's clips from inside. Needs a sim
-with real clip/bar shapes. Also open: a positive feed pusher (belt friction ~0.05 N is too weak to snap a link).
+Closing the loop (34th link): a geometrically valid sequence is found (checked on the real LDraw meshes by erosion depth,
+`sim/closing/lift.py 12 50 15 0`; worst overlap 1.5 LDU = 0.6 mm, i.e. a snap; animation `previews/closing_sequence.mp4`,
+`src/prev_close.py`). Slot on a straight run (tested at 16 pitches, z -3 .. -19). Facts: a 3873 joint bends outward only
+~12 deg (plates touch) and inward to ~90 deg; hooks open towards the sprocket side, so link 34's rear pins must enter link 1's
+hooks from the INSIDE; a tilted link never fits straight into a one-pitch gap. Sequence: (1) head region lifted, 12 deg
+outward at joints 0-1, 1-2, 2-3 (link 0 front 19 out, 5 back); (2) link 34 comes straight in from outside tilted 50 deg
+(rear end leading), stops 4 short along its hook mouth; (3) moves 4 along the mouth: hooks catch link 33's pins; (4) swings
+to 15 deg about them; (5) head lowered: link 0's hooks close over link 34's pins from inside; (6) link 34 swings flat.
+Rejected (tested): fork swinging link 0 out (impossible, 12 deg limit), point push from below (floppy), straight presser
+(buckles), swing without the lifted head (plate corner hits link 0's hook back by up to 6 LDU), any straight insertion
+into the unopened gap (>= 6 LDU overlap). Next: the mechanism - a guide shoe/channel that bends the head region out and
+back (one motion), and a gripper/pusher that carries link 34 on its tilted path (insert, hook, swing). Also open: move the
+slot (K_SLOT 20 -> 16, queue/belt follow), positive feed pusher (belt friction ~0.05 N is too weak to snap a link).
 
 ### Earlier status (2026-11-21)
 Done and clash-checked over the cycle (both sides): final assembly line (builder + tug), track-unit line with five
